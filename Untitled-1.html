@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Weather App</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+        #map {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            z-index: -1;
+        }
+        .container {
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            width: 350px;
+            transition: all 0.3s ease-in-out;
+            position: absolute;
+            bottom: 5%;
+            right: 5%;
+            transform: translateX(0);
+        }
+        h2 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .data p {
+            margin: 8px 0;
+            color: #555;
+            font-size: 16px;
+        }
+        .loading {
+            font-size: 16px;
+            color: #777;
+        }
+        .error {
+            color: red;
+            font-size: 16px;
+        }
+        .search-container {
+            margin-bottom: 10px;
+        }
+        .search-container input {
+            padding: 8px;
+            width: 70%;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        .search-container button {
+            padding: 8px;
+            margin-left: 5px;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #spotify {
+            position: absolute;
+            top: 5%;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        #spotify iframe {
+            width: 500px;
+            height: 200px;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div class="container">
+        <h2>Weather Data</h2>
+        <div class="search-container">
+            <input type="text" id="locationInput" placeholder="Enter location (city or lat,lon)">
+            <button onclick="searchWeather()">Search</button>
+        </div>
+        <div id="data" class="loading">Loading...</div>
+    </div>
+    <div id="spotify">
+        <iframe id="spotifyPlayer" style="border-radius:12px" frameborder="0" allowtransparency="true" allow="encrypted-media"></iframe>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script>
+        let map = L.map('map').setView([14.5995, 120.9842], 12);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+        let marker;
+
+        function fetchWeather(location) {
+            fetch(`https://api.weatherapi.com/v1/current.json?key=327d05a39d244639b1065810250802&q=${location}&aqi=no`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok ' + response.statusText);
+                }
+                return response.json();
+            })
+            .then(data => {
+                let lat = data.location.lat;
+                let lon = data.location.lon;
+                let locationName = data.location.name;
+                let temperature = data.current.temp_c;
+                let humidity = data.current.humidity;
+                let condition = data.current.condition.text;
+                let windSpeed = data.current.wind_kph;
+                let feelsLike = data.current.feelslike_c;
+                let pressure = data.current.pressure_mb;
+                
+                document.getElementById('data').innerHTML = `
+                    <p><strong>Location:</strong> ${locationName}</p>
+                    <p><strong>Temperature:</strong> ${temperature}°C</p>
+                    <p><strong>Feels Like:</strong> ${feelsLike}°C</p>
+                    <p><strong>Humidity:</strong> ${humidity}%</p>
+                    <p><strong>Condition:</strong> ${condition}</p>
+                    <p><strong>Wind Speed:</strong> ${windSpeed} km/h</p>
+                    <p><strong>Pressure:</strong> ${pressure} mb</p>
+                `;
+
+                map.setView([lat, lon], 12);
+                if (marker) {
+                    marker.setLatLng([lat, lon]).bindPopup(`<b>${locationName}</b><br>Weather: ${condition}`).openPopup();
+                } else {
+                    marker = L.marker([lat, lon]).addTo(map)
+                        .bindPopup(`<b>${locationName}</b><br>Weather: ${condition}`)
+                        .openPopup();
+                }
+
+                let spotifyAlbum = "https://open.spotify.com/embed/album/3mH6qwIy9crq0I9YQbOuDf";
+                document.getElementById('spotifyPlayer').src = spotifyAlbum;
+            })
+            .catch(error => {
+                document.getElementById('data').innerHTML = `<p class="error">Error fetching data. Please try again later.</p>`;
+                console.error('Error:', error);
+            });
+        }
+
+        function searchWeather() {
+            let input = document.getElementById('locationInput').value;
+            if (input.trim() !== "") {
+                fetchWeather(input);
+            }
+        }
+
+        fetchWeather("Dagupan");
+    </script>
+</body>
+</html>
